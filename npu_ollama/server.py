@@ -3,6 +3,7 @@ import socket
 
 import uvicorn
 
+from .api import app
 from .paths import ensure_dirs
 
 DEFAULT_HOST = "127.0.0.1"
@@ -40,7 +41,7 @@ def serve(host: str | None = None, port: int | None = None) -> None:
     ensure_dirs()
     host = host or os.getenv("OLLAMA_HOST", DEFAULT_HOST)
     uvicorn.run(
-        "npu_ollama.api:app",
+        app,
         host=host,
         port=resolve_port(host, port),
     )

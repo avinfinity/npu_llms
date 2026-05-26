@@ -15,6 +15,15 @@ for package in ["openvino", "openvino_genai", "uvicorn", "fastapi", "huggingface
     binaries += collected[1]
     hiddenimports += collected[2]
 
+hiddenimports += [
+    "npu_ollama.api",
+    "npu_ollama.cli",
+    "npu_ollama.llm",
+    "npu_ollama.registry",
+    "npu_ollama.server",
+    "npu_ollama.store",
+]
+
 a = Analysis(
     [str(ROOT / "packaging" / "pyinstaller-entry.py")],
     pathex=[str(ROOT)],

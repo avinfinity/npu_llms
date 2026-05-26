@@ -159,7 +159,7 @@ def cmd_start(wait_seconds: float = 30.0) -> int:
     log_path = state_dir() / "server-start.log"
     with log_path.open("ab") as log:
         process = subprocess.Popen(
-            [sys.executable, "-m", "npu_ollama.server"],
+            _server_command(),
             stdout=log,
             stderr=log,
             creationflags=creationflags,
@@ -168,6 +168,10 @@ def cmd_start(wait_seconds: float = 30.0) -> int:
     pid_file().write_text(str(process.pid), encoding="utf-8")
     deadline = time.time() + wait_seconds
     while time.time() < deadline:
+        if process.poll() is not None:
+            print(f"npu-ollama server exited while starting. See {log_path}")
+            _print_startup_log_tail()
+            return 1
         url, health = _find_running_server()
         if health:
             print(f"npu-ollama started at {url} (pid {process.pid})")
@@ -181,12 +185,18 @@ def cmd_run(model: str, prompt: str = "") -> int:
     if not _is_installed(model):
         cmd_pull(model)
     os.environ["NPU_MODEL"] = model
-    cmd_start(wait_seconds=5.0)
+    if not _ensure_server_ready(wait_seconds=60.0):
+        return 1
     if prompt:
-        response = _post_json(
-            "/api/chat",
-            {"model": model, "stream": False, "messages": [{"role": "user", "content": prompt}]},
-        )
+        try:
+            response = _post_json(
+                "/api/chat",
+                {"model": model, "stream": False, "messages": [{"role": "user", "content": prompt}]},
+            )
+        except RuntimeError as exc:
+            print(exc)
+            _print_startup_log_tail()
+            return 1
         print(response.get("message", {}).get("content", ""))
         return 0
     print("Enter /bye to exit.")
@@ -202,7 +212,12 @@ def cmd_run(model: str, prompt: str = "") -> int:
         if not text:
             continue
         messages.append({"role": "user", "content": text})
-        response = _post_json("/api/chat", {"model": model, "stream": False, "messages": messages})
+        try:
+            response = _post_json("/api/chat", {"model": model, "stream": False, "messages": messages})
+        except RuntimeError as exc:
+            print(exc)
+            _print_startup_log_tail()
+            return 1
         reply = response.get("message", {}).get("content", "")
         print(reply)
         messages.append({"role": "assistant", "content": reply})
@@ -212,8 +227,7 @@ def cmd_install_startup() -> int:
     if not sys.platform.startswith("win"):
         print("install-startup is currently implemented for Windows Task Scheduler.")
         return 1
-    exe = Path(sys.executable)
-    task = f'"{exe}" -m npu_ollama.server'
+    task = " ".join(f'"{part}"' if " " in part else part for part in _server_command())
     subprocess.run(
         ["schtasks", "/Create", "/TN", "NPU Ollama", "/SC", "ONLOGON", "/RL", "LIMITED", "/F", "/TR", task],
         check=True,
@@ -240,6 +254,47 @@ def _read_pid() -> Optional[str]:
     if path.exists():
         return path.read_text(encoding="utf-8").strip()
     return None
+
+
+def _server_command() -> list[str]:
+    if getattr(sys, "frozen", False):
+        return [sys.executable, "serve"]
+    return [sys.executable, "-m", "npu_ollama.server"]
+
+
+def _ensure_server_ready(wait_seconds: float) -> bool:
+    ensure_dirs()
+    url, health = _find_running_server()
+    if health:
+        return True
+
+    if cmd_start(wait_seconds=wait_seconds) != 0:
+        return False
+    url, health = _find_running_server()
+    if health:
+        return True
+
+    print(f"npu-ollama server did not become ready at {url}.")
+    _print_startup_log_tail()
+    return False
+
+
+def _print_startup_log_tail(lines: int = 25) -> None:
+    log_path = state_dir() / "server-start.log"
+    if not log_path.exists():
+        return
+
+    try:
+        log_lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return
+
+    if not log_lines:
+        return
+
+    print(f"Last {min(lines, len(log_lines))} lines from {log_path}:")
+    for line in log_lines[-lines:]:
+        print(line)
 
 
 def _get_json(path: str) -> Optional[Dict[str, Any]]:
