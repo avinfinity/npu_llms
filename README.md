@@ -13,7 +13,14 @@ npu-ollama start
 npu-ollama run llama-3.2-1b-instruct-npu-ov
 ```
 
-The API listens on `http://127.0.0.1:11435` by default and exposes `/api/generate`, `/api/chat`, `/api/tags`, and `/api/version`.
+The API listens on `http://127.0.0.1:11435` by default. If that port is already occupied, for example by Ollama, it automatically falls back to `http://127.0.0.1:11436`. Set `NPU_PORT` to choose a specific port:
+
+```powershell
+$env:NPU_PORT = "11500"
+npu-ollama start
+```
+
+The server exposes `/api/generate`, `/api/chat`, `/api/tags`, and `/api/version`.
 
 ## CLI
 
