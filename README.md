@@ -1,5 +1,7 @@
 # NPU Ollama
 
+[![Build Installer](https://github.com/avinfinity/npu_llms/actions/workflows/main.yml/badge.svg)](https://github.com/avinfinity/npu_llms/actions/workflows/main.yml)
+
 NPU Ollama packages the existing OpenVINO GenAI NPU loader behind an Ollama-compatible API, CLI, and minimal local chat UI.
 
 ## Developer install
