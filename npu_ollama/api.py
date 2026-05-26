@@ -1,3 +1,4 @@
+import os
 import time
 from datetime import datetime, timezone
 from typing import Optional,List,Dict,Any
@@ -63,13 +64,9 @@ def generation_options(options):
 @app.get("/health")
 def health():
 
-    llm=get_llm()
-
     return {
 
-        "status":"ok",
-        "model":llm.model_name,
-        "device":llm.device
+        "status":"ok"
 
     }
 
@@ -96,8 +93,11 @@ def tags():
 @app.post("/api/generate")
 def generate(request:GenerateRequest):
 
+    device = os.getenv("NPU_DEVICE", "NPU")
+
     llm=get_llm(
-        request.model
+        request.model,
+        device
     )
 
     options=generation_options(
@@ -156,8 +156,11 @@ def chat(request:ChatRequest):
             "messages required"
         )
 
+    device = os.getenv("NPU_DEVICE", "NPU")
+
     llm=get_llm(
-        request.model
+        request.model,
+        device
     )
 
     prompt=request.messages[-1].content

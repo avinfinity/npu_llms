@@ -8,6 +8,8 @@ from typing import Optional, Iterator, Callable
 import openvino as ov
 import openvino_genai as ov_genai
 
+from .store import model_path as get_model_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -19,7 +21,7 @@ class NPULLM:
         device: str = "NPU",
     ):
 
-        self.model_path = self._resolve_model_path(model_path)
+        self.model_path = model_path
         self.model_name = Path(model_path).name
         self.device = self._validate_device(device)
 
@@ -306,33 +308,64 @@ class NPULLM:
 
 _instance = None
 _lock = threading.Lock()
+_current_model = None
+_current_device = None
 
 
 def get_llm(
-    model_path
+    model_path: Optional[str] = None,
+    device: str = "NPU"
 ):
 
-    global _instance
+    global _instance, _current_model, _current_device
 
-    if _instance is None:
+    # Resolve model path if just name provided
+    if model_path:
+        resolved_path = str(get_model_path(model_path))
+    else:
+        resolved_path = None
+
+    # Check if we need to reload (model or device changed)
+    needs_reload = (
+        _instance is None or
+        (resolved_path and resolved_path != _current_model) or
+        device != _current_device
+    )
+
+    if needs_reload:
 
         with _lock:
 
-            if _instance is None:
+            needs_reload = (
+                _instance is None or
+                (resolved_path and resolved_path != _current_model) or
+                device != _current_device
+            )
+
+            if needs_reload:
+
+                if not resolved_path:
+                    raise ValueError("model_path required")
 
                 _instance = NPULLM(
-                    model_path
+                    resolved_path,
+                    device
                 )
+
+                _current_model = resolved_path
+                _current_device = device
 
     return _instance
 
 
 def reset_llm():
 
-    global _instance
+    global _instance, _current_model, _current_device
 
     if _instance:
 
         _instance.close()
 
     _instance = None
+    _current_model = None
+    _current_device = None
