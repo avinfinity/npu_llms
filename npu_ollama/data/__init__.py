@@ -1,0 +1,2 @@
+"""Bundled model registry fallback."""
+

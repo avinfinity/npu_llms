@@ -1,0 +1,193 @@
+{
+  "models": [
+    {
+      "name": "llama-3.2-1b-instruct-npu-ov",
+      "repo": "https://huggingface.co/llmware/llama-3.2-1b-instruct-npu-ov",
+      "description": "llmware/llama-3.2-1b-instruct-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "llama",
+      "npu": "intel",
+      "size": "1B",
+      "format": "openvino"
+    },
+    {
+      "name": "phi-4-npu-ov",
+      "repo": "https://huggingface.co/llmware/phi-4-npu-ov",
+      "description": "llmware/phi-4-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "phi",
+      "npu": "intel",
+      "size": "unknown",
+      "format": "openvino"
+    },
+    {
+      "name": "llama-3.2-3b-instruct-npu-ov",
+      "repo": "https://huggingface.co/llmware/llama-3.2-3b-instruct-npu-ov",
+      "description": "llmware/llama-3.2-3b-instruct-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "llama",
+      "npu": "intel",
+      "size": "3B",
+      "format": "openvino"
+    },
+    {
+      "name": "bling-tiny-llama-npu-ov",
+      "repo": "https://huggingface.co/llmware/bling-tiny-llama-npu-ov",
+      "description": "llmware/bling-tiny-llama-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "llama",
+      "npu": "intel",
+      "size": "tiny",
+      "format": "openvino"
+    },
+    {
+      "name": "phi-3-npu-ov",
+      "repo": "https://huggingface.co/llmware/phi-3-npu-ov",
+      "description": "llmware/phi-3-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "phi",
+      "npu": "intel",
+      "size": "unknown",
+      "format": "openvino"
+    },
+    {
+      "name": "mistral-7b-v0.3-npu-ov",
+      "repo": "https://huggingface.co/llmware/mistral-7b-v0.3-npu-ov",
+      "description": "llmware/mistral-7b-v0.3-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "mistral",
+      "npu": "intel",
+      "size": "7B",
+      "format": "openvino"
+    },
+    {
+      "name": "qwen-2.5-coder-instruct-npu-ov",
+      "repo": "https://huggingface.co/llmware/qwen-2.5-coder-instruct-npu-ov",
+      "description": "llmware/qwen-2.5-coder-instruct-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "qwen",
+      "npu": "intel",
+      "size": "unknown",
+      "format": "openvino"
+    },
+    {
+      "name": "llama-3.1-8b-instruct-npu-ov",
+      "repo": "https://huggingface.co/llmware/llama-3.1-8b-instruct-npu-ov",
+      "description": "llmware/llama-3.1-8b-instruct-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "llama",
+      "npu": "intel",
+      "size": "8B",
+      "format": "openvino"
+    },
+    {
+      "name": "yi-9b-npu-ov",
+      "repo": "https://huggingface.co/llmware/yi-9b-npu-ov",
+      "description": "llmware/yi-9b-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "yi",
+      "npu": "intel",
+      "size": "9B",
+      "format": "openvino"
+    },
+    {
+      "name": "slim-sentiment-npu-ov",
+      "repo": "https://huggingface.co/llmware/slim-sentiment-npu-ov",
+      "description": "llmware/slim-sentiment-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "slim",
+      "npu": "intel",
+      "size": "unknown",
+      "format": "openvino"
+    },
+    {
+      "name": "slim-extract-tiny-npu-ov",
+      "repo": "https://huggingface.co/llmware/slim-extract-tiny-npu-ov",
+      "description": "llmware/slim-extract-tiny-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "slim",
+      "npu": "intel",
+      "size": "tiny",
+      "format": "openvino"
+    },
+    {
+      "name": "slim-emotions-npu-ov",
+      "repo": "https://huggingface.co/llmware/slim-emotions-npu-ov",
+      "description": "llmware/slim-emotions-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "slim",
+      "npu": "intel",
+      "size": "unknown",
+      "format": "openvino"
+    },
+    {
+      "name": "slim-sql-npu-ov",
+      "repo": "https://huggingface.co/llmware/slim-sql-npu-ov",
+      "description": "llmware/slim-sql-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "slim",
+      "npu": "intel",
+      "size": "unknown",
+      "format": "openvino"
+    },
+    {
+      "name": "slim-topics-npu-ov",
+      "repo": "https://huggingface.co/llmware/slim-topics-npu-ov",
+      "description": "llmware/slim-topics-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "slim",
+      "npu": "intel",
+      "size": "unknown",
+      "format": "openvino"
+    },
+    {
+      "name": "slim-tags-npu-ov",
+      "repo": "https://huggingface.co/llmware/slim-tags-npu-ov",
+      "description": "llmware/slim-tags-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "slim",
+      "npu": "intel",
+      "size": "unknown",
+      "format": "openvino"
+    },
+    {
+      "name": "slim-ner-npu-ov",
+      "repo": "https://huggingface.co/llmware/slim-ner-npu-ov",
+      "description": "llmware/slim-ner-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "slim",
+      "npu": "intel",
+      "size": "unknown",
+      "format": "openvino"
+    },
+    {
+      "name": "slim-intent-npu-ov",
+      "repo": "https://huggingface.co/llmware/slim-intent-npu-ov",
+      "description": "llmware/slim-intent-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "slim",
+      "npu": "intel",
+      "size": "unknown",
+      "format": "openvino"
+    },
+    {
+      "name": "slim-ratings-npu-ov",
+      "repo": "https://huggingface.co/llmware/slim-ratings-npu-ov",
+      "description": "llmware/slim-ratings-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "slim",
+      "npu": "intel",
+      "size": "unknown",
+      "format": "openvino"
+    },
+    {
+      "name": "slim-boolean-phi-3-npu-ov",
+      "repo": "https://huggingface.co/llmware/slim-boolean-phi-3-npu-ov",
+      "description": "llmware/slim-boolean-phi-3-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "phi",
+      "npu": "intel",
+      "size": "unknown",
+      "format": "openvino"
+    },
+    {
+      "name": "slim-xsum-phi-3-npu-ov",
+      "repo": "https://huggingface.co/llmware/slim-xsum-phi-3-npu-ov",
+      "description": "llmware/slim-xsum-phi-3-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "phi",
+      "npu": "intel",
+      "size": "unknown",
+      "format": "openvino"
+    },
+    {
+      "name": "slim-summary-tiny-npu-ov",
+      "repo": "https://huggingface.co/llmware/slim-summary-tiny-npu-ov",
+      "description": "llmware/slim-summary-tiny-npu-ov from the llmware NPU OpenVINO collection.",
+      "family": "slim",
+      "npu": "intel",
+      "size": "tiny",
+      "format": "openvino"
+    }
+  ]
+}

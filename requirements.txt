@@ -1,0 +1,6 @@
+fastapi
+huggingface-hub
+httpx
+uvicorn[standard]
+openvino-genai
+pyinstaller; platform_system == "Windows"
