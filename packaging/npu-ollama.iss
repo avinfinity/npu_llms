@@ -15,6 +15,7 @@ Compression=lzma
 SolidCompression=yes
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
+ChangesEnvironment=yes
 
 [Files]
 Source: "..\dist\npu-ollama\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -30,9 +31,78 @@ Filename: "{app}\npu-ollama.exe"; Parameters: "start"; Flags: nowait runhidden p
 [UninstallRun]
 Filename: "{app}\npu-ollama.exe"; Parameters: "uninstall-startup"; Flags: runhidden
 
+[Registry]
+Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}"; Check: NeedsPathEntry(ExpandConstant('{app}')); Flags: preservestringtype
+
 [Code]
 const
   IntelNpuDriverUrl = 'https://www.intel.com/content/www/us/en/download/794734/intel-npu-driver-windows.html';
+
+function PathEntryExists(PathValue: String; Entry: String): Boolean;
+begin
+  Result := Pos(';' + Uppercase(Entry) + ';', ';' + Uppercase(PathValue) + ';') > 0;
+end;
+
+function NeedsPathEntry(Entry: String): Boolean;
+var
+  PathValue: String;
+begin
+  if not RegQueryStringValue(
+    HKLM,
+    'SYSTEM\CurrentControlSet\Control\Session Manager\Environment',
+    'Path',
+    PathValue
+  ) then
+    PathValue := '';
+
+  Result := not PathEntryExists(PathValue, Entry);
+end;
+
+procedure RemovePathEntry(Entry: String);
+var
+  PathValue: String;
+  NewPathValue: String;
+  Segment: String;
+  SeparatorPos: Integer;
+begin
+  if not RegQueryStringValue(
+    HKLM,
+    'SYSTEM\CurrentControlSet\Control\Session Manager\Environment',
+    'Path',
+    PathValue
+  ) then
+    exit;
+
+  NewPathValue := '';
+  PathValue := PathValue + ';';
+
+  while Length(PathValue) > 0 do
+  begin
+    SeparatorPos := Pos(';', PathValue);
+    Segment := Copy(PathValue, 1, SeparatorPos - 1);
+    Delete(PathValue, 1, SeparatorPos);
+
+    if (Segment <> '') and (Uppercase(Segment) <> Uppercase(Entry)) then
+    begin
+      if NewPathValue <> '' then
+        NewPathValue := NewPathValue + ';';
+      NewPathValue := NewPathValue + Segment;
+    end;
+  end;
+
+  RegWriteExpandStringValue(
+    HKLM,
+    'SYSTEM\CurrentControlSet\Control\Session Manager\Environment',
+    'Path',
+    NewPathValue
+  );
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usUninstall then
+    RemovePathEntry(ExpandConstant('{app}'));
+end;
 
 function IsIntelNpuDriverPresent(): Boolean;
 var

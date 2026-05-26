@@ -2,7 +2,11 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
-python -m pip install --upgrade pip build pyinstaller
+python -m pip install --upgrade pip build
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+python -m pip install ".[windows-installer]"
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+python -c "from huggingface_hub import snapshot_download"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 python -m build
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
