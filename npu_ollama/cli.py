@@ -16,11 +16,18 @@ from .store import installed_models, pull_model, remove_model
 
 
 DEFAULT_HOST = os.getenv("OLLAMA_HOST", "127.0.0.1")
-DEFAULT_PORT = int(os.getenv("OLLAMA_PORT", "11435"))
+DEFAULT_PORT = int(os.getenv("NPU_PORT") or os.getenv("npu_port") or os.getenv("OLLAMA_PORT") or "11435")
+FALLBACK_PORT = 11436
 
 
-def base_url() -> str:
-    return f"http://{DEFAULT_HOST}:{DEFAULT_PORT}"
+def base_url(port: int | None = None) -> str:
+    return f"http://{DEFAULT_HOST}:{port or DEFAULT_PORT}"
+
+
+def candidate_base_urls() -> list[str]:
+    if os.getenv("NPU_PORT") or os.getenv("npu_port") or os.getenv("OLLAMA_PORT"):
+        return [base_url()]
+    return [base_url(11435), base_url(FALLBACK_PORT)]
 
 
 def pid_file() -> Path:
@@ -50,7 +57,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     serve_parser = sub.add_parser("serve", help="Run the Ollama-compatible API server in the foreground.")
     serve_parser.add_argument("--host", default=DEFAULT_HOST)
-    serve_parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    serve_parser.add_argument("--port", type=int, default=None)
 
     start_parser = sub.add_parser("start", help="Start the API server in the background.")
     start_parser.add_argument("--wait", type=float, default=30.0)
@@ -114,11 +121,11 @@ def _safe_installed_models() -> list[dict]:
 
 
 def cmd_ps() -> int:
-    health = _get_json("/health")
+    url, health = _find_running_server()
     pid = _read_pid()
     if health:
         print(f"NAME        PID       HOST                  MODEL       DEVICE")
-        print(f"npu-ollama  {pid or '-':<8} {base_url():<21} {health.get('model') or '-':<11} {health.get('device') or '-'}")
+        print(f"npu-ollama  {pid or '-':<8} {url:<21} {health.get('model') or '-':<11} {health.get('device') or '-'}")
         return 0
     print("No npu-ollama server is responding.")
     if pid:
@@ -142,8 +149,9 @@ def cmd_pull(model: str) -> int:
 
 def cmd_start(wait_seconds: float = 30.0) -> int:
     ensure_dirs()
-    if _get_json("/health"):
-        print(f"npu-ollama is already running at {base_url()}")
+    url, health = _find_running_server()
+    if health:
+        print(f"npu-ollama is already running at {url}")
         return 0
     creationflags = 0
     if sys.platform.startswith("win"):
@@ -160,8 +168,9 @@ def cmd_start(wait_seconds: float = 30.0) -> int:
     pid_file().write_text(str(process.pid), encoding="utf-8")
     deadline = time.time() + wait_seconds
     while time.time() < deadline:
-        if _get_json("/health"):
-            print(f"npu-ollama started at {base_url()} (pid {process.pid})")
+        url, health = _find_running_server()
+        if health:
+            print(f"npu-ollama started at {url} (pid {process.pid})")
             return 0
         time.sleep(0.5)
     print(f"started pid {process.pid}; server is still warming up at {base_url()}")
@@ -234,21 +243,34 @@ def _read_pid() -> Optional[str]:
 
 
 def _get_json(path: str) -> Optional[Dict[str, Any]]:
-    try:
-        with urlopen(base_url() + path, timeout=2) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except Exception:
-        return None
+    for url in candidate_base_urls():
+        try:
+            with urlopen(url + path, timeout=2) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except Exception:
+            continue
+    return None
+
+
+def _find_running_server() -> tuple[str, Optional[Dict[str, Any]]]:
+    for url in candidate_base_urls():
+        try:
+            with urlopen(url + "/health", timeout=2) as response:
+                return url, json.loads(response.read().decode("utf-8"))
+        except Exception:
+            continue
+    return base_url(), None
 
 
 def _post_json(path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     data = json.dumps(payload).encode("utf-8")
-    request = Request(base_url() + path, data=data, headers={"Content-Type": "application/json"}, method="POST")
+    url, _ = _find_running_server()
+    request = Request(url + path, data=data, headers={"Content-Type": "application/json"}, method="POST")
     try:
         with urlopen(request, timeout=600) as response:
             return json.loads(response.read().decode("utf-8"))
     except URLError as exc:
-        raise RuntimeError(f"Could not reach npu-ollama at {base_url()}: {exc}") from exc
+        raise RuntimeError(f"Could not reach npu-ollama at {url}: {exc}") from exc
 
 
 def _print_table(rows: Iterable[Dict[str, Any]], columns: list[str]) -> None:
