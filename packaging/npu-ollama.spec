@@ -1,5 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import importlib.util
 from PyInstaller.utils.hooks import collect_all
 from pathlib import Path
 
@@ -9,11 +10,18 @@ datas = []
 binaries = []
 hiddenimports = []
 
-for package in ["openvino", "openvino_genai", "uvicorn", "fastapi", "huggingface_hub"]:
+for package in ["openvino", "openvino_genai", "openvino_tokenizers", "uvicorn", "fastapi", "huggingface_hub"]:
     collected = collect_all(package)
     datas += collected[0]
     binaries += collected[1]
     hiddenimports += collected[2]
+
+tokenizers_spec = importlib.util.find_spec("openvino_tokenizers")
+if tokenizers_spec and tokenizers_spec.submodule_search_locations:
+    tokenizers_root = Path(next(iter(tokenizers_spec.submodule_search_locations)))
+    tokenizers_dll = tokenizers_root / "lib" / "openvino_tokenizers.dll"
+    if tokenizers_dll.exists():
+        binaries += [(str(tokenizers_dll), ".")]
 
 hiddenimports += [
     "npu_ollama.api",

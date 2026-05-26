@@ -14,6 +14,7 @@ dist/
 
 # Local environments
 .venv/
+.build-venv/
 venv/
 .npu-env/
 
@@ -28,4 +29,3 @@ api-server*.log
 Thumbs.db
 .idea/
 .vscode/
-

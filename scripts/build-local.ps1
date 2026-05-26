@@ -6,6 +6,8 @@ param(
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
+$VenvDir = ".build-venv"
+$Python = Join-Path $VenvDir "Scripts\python.exe"
 
 function Remove-IfExists {
   param([string]$Path)
@@ -33,29 +35,36 @@ function Run-Step {
 if ($Clean) {
   Remove-IfExists "build"
   Remove-IfExists "dist"
+  Remove-IfExists $VenvDir
   Get-ChildItem -Directory -Filter "*.egg-info" | ForEach-Object {
     Remove-IfExists $_.FullName
   }
 }
 
+if (-not (Test-Path -LiteralPath $Python)) {
+  Run-Step "Create build virtual environment" {
+    python -m venv $VenvDir
+  }
+}
+
 Run-Step "Install build dependencies" {
-  python -m pip install --upgrade pip build
+  & $Python -m pip install --upgrade pip build
 }
 
 Run-Step "Install project dependencies" {
-  python -m pip install ".[windows-installer]"
+  & $Python -m pip install ".[windows-installer]"
 }
 
 Run-Step "Verify Hugging Face dependency" {
-  python -c "from huggingface_hub import snapshot_download"
+  & $Python -c "from huggingface_hub import snapshot_download"
 }
 
 Run-Step "Build Python package" {
-  python -m build
+  & $Python -m build
 }
 
 Run-Step "Build PyInstaller bundle" {
-  python -m PyInstaller packaging\npu-ollama.spec --clean --noconfirm
+  & $Python -m PyInstaller packaging\npu-ollama.spec --clean --noconfirm
 }
 
 if (-not (Test-Path -LiteralPath "dist\npu-ollama\npu-ollama.exe")) {

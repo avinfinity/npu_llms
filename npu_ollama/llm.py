@@ -1,161 +1,338 @@
-import os
+import json
+import logging
 import threading
-import time
 from pathlib import Path
 from queue import Queue
-from typing import Callable, Iterator, Optional
+from typing import Optional, Iterator, Callable
 
-from .paths import models_dir
-from .store import installed_models, model_path
+import openvino as ov
+import openvino_genai as ov_genai
 
-LLMPipeline = None
-StreamingStatus = None
-
-DEFAULT_MODEL_NAME = os.getenv("NPU_MODEL", "llama-3.2-1b-instruct-npu-ov")
-DEFAULT_MODEL_PATH = os.getenv("NPU_MODEL_PATH")
-DEFAULT_DEVICE = os.getenv("NPU_DEVICE", "NPU")
-DEFAULT_MAX_PROMPT_LEN = int(os.getenv("NPU_MAX_PROMPT_LEN", "8192"))
-DEFAULT_MIN_RESPONSE_LEN = int(os.getenv("NPU_MIN_RESPONSE_LEN", "150"))
-DEFAULT_PREFILL_HINT = os.getenv("NPU_PREFILL_HINT")
-DEFAULT_GENERATE_HINT = os.getenv("NPU_GENERATE_HINT")
-
-
-def is_npu_device(device: str) -> bool:
-    return "NPU" in device.upper()
-
-
-def resolve_model_path(model: Optional[str] = None) -> Path:
-    if DEFAULT_MODEL_PATH and model is None:
-        return Path(DEFAULT_MODEL_PATH)
-    name = model or DEFAULT_MODEL_NAME
-    candidate = model_path(name)
-    if candidate.exists():
-        return candidate
-    legacy = Path("models") / name
-    if legacy.exists():
-        return legacy
-    direct = Path(name)
-    if direct.exists():
-        return direct
-    installed = installed_models()
-    if installed:
-        return Path(str(installed[0]["path"]))
-    return models_dir() / name
+logger = logging.getLogger(__name__)
 
 
 class NPULLM:
+
     def __init__(
         self,
-        model_path: Optional[str] = None,
-        device: str = DEFAULT_DEVICE,
-        max_prompt_len: int = DEFAULT_MAX_PROMPT_LEN,
-        min_response_len: int = DEFAULT_MIN_RESPONSE_LEN,
-        prefill_hint: Optional[str] = DEFAULT_PREFILL_HINT,
-        generate_hint: Optional[str] = DEFAULT_GENERATE_HINT,
+        model_path: str,
+        device: str = "NPU",
     ):
-        self.model_path = str(Path(model_path) if model_path else resolve_model_path())
-        self.device = device
-        self.model_name = Path(self.model_path).name
-        self.max_prompt_len = max_prompt_len
-        self.min_response_len = min_response_len
-        self.prefill_hint = prefill_hint
-        self.generate_hint = generate_hint
-        self.loaded_at = time.time()
-        self.pipeline_config = self._build_pipeline_config()
-        self._pipe = self._load_pipeline()
+
+        self.model_path = self._resolve_model_path(model_path)
+        self.model_name = Path(model_path).name
+        self.device = self._validate_device(device)
+
         self._lock = threading.Lock()
 
-    def _load_pipeline(self):
-        global LLMPipeline, StreamingStatus
-        if LLMPipeline is None:
-            import openvino_genai as ov_genai
+        logger.info(
+            f"Loading model={self.model_name} "
+            f"device={self.device}"
+        )
 
-            LLMPipeline = ov_genai.LLMPipeline
-            StreamingStatus = ov_genai.StreamingStatus
-        elif StreamingStatus is None:
-            class _StreamingStatus:
-                RUNNING = "RUNNING"
+        self.model_config = self._load_json(
+            "config.json"
+        )
 
-            StreamingStatus = _StreamingStatus
+        self.tokenizer_config = self._load_json(
+            "tokenizer_config.json"
+        )
 
-        if self.pipeline_config:
-            return LLMPipeline(self.model_path, self.device, self.pipeline_config)
-        return LLMPipeline(self.model_path, self.device)
+        self.capabilities = self._detect_capabilities()
 
-    def _build_pipeline_config(self) -> dict:
-        if not is_npu_device(self.device):
+        self.pipe = ov_genai.LLMPipeline(
+            self.model_path,
+            self.device
+        )
+
+        if self.capabilities["supports_chat"]:
+            try:
+                self.pipe.start_chat()
+                logger.info("Chat mode enabled")
+            except Exception:
+                logger.warning(
+                    "Chat template exists but "
+                    "chat initialization failed"
+                )
+
+    ##################################################
+    # Metadata loading
+    ##################################################
+
+    def _load_json(
+        self,
+        filename
+    ):
+
+        path = Path(self.model_path) / filename
+
+        if not path.exists():
             return {}
-        config = {
-            "MAX_PROMPT_LEN": self.max_prompt_len,
-            "MIN_RESPONSE_LEN": self.min_response_len,
+
+        try:
+            with open(
+                path,
+                encoding="utf8"
+            ) as f:
+
+                return json.load(f)
+
+        except Exception as e:
+
+            logger.warning(
+                f"Could not load {filename}: {e}"
+            )
+
+            return {}
+
+    ##################################################
+    # Device handling
+    ##################################################
+
+    def _validate_device(
+        self,
+        device
+    ):
+
+        available = ov.get_available_devices()
+
+        npu = next(
+            (
+                d for d in available
+                if "NPU" in d
+            ),
+            None
+        )
+
+        if npu:
+            return npu
+
+        raise RuntimeError(
+            f"NPU not available. "
+            f"Available={available}"
+        )
+
+    ##################################################
+    # Model capability detection
+    ##################################################
+
+    def _detect_capabilities(
+        self
+    ):
+
+        chat_template = bool(
+            self.tokenizer_config.get(
+                "chat_template"
+            )
+        )
+
+        prompt_wrapper = (
+            self.model_config.get(
+                "prompt_wrapper"
+            )
+        )
+
+        prompt_format = (
+            self.model_config.get(
+                "prompt_format"
+            )
+        )
+
+        is_rag = (
+            "context_passage"
+            in str(prompt_format)
+        )
+
+        return {
+
+            "supports_chat":
+                chat_template,
+
+            "prompt_wrapper":
+                prompt_wrapper,
+
+            "prompt_format":
+                prompt_format,
+
+            "rag":
+                is_rag
         }
-        if self.prefill_hint:
-            config["PREFILL_HINT"] = self.prefill_hint
-        if self.generate_hint:
-            config["GENERATE_HINT"] = self.generate_hint
-        return config
+
+    ##################################################
+    # Prompt construction
+    ##################################################
+
+    def _build_prompt(
+        self,
+        prompt,
+        context=""
+    ):
+
+        cap = self.capabilities
+
+        if cap["supports_chat"]:
+            return prompt
+
+        if cap["prompt_wrapper"]:
+
+            template = (
+                cap["prompt_format"]
+                or
+                "<human>\n{question}\n<bot>:"
+            )
+
+            return (
+                template
+                .replace(
+                    "{question}",
+                    prompt
+                )
+                .replace(
+                    "{context_passage}",
+                    context
+                )
+            )
+
+        return prompt
+
+    ##################################################
+    # Generation
+    ##################################################
 
     def generate(
         self,
         prompt: str,
-        max_new_tokens: int = 4000,
-        streamer: Optional[Callable[[str], object]] = None,
-        **options,
-    ) -> str:
-        generation_options = {"max_new_tokens": max_new_tokens}
-        generation_options.update({key: value for key, value in options.items() if value is not None})
+        context: str = "",
+        max_new_tokens: int = 512,
+        temperature: float = 0.7,
+        top_p: float = 0.9,
+        repetition_penalty: float = 1.1,
+    ):
+
+        prompt = self._build_prompt(
+            prompt,
+            context
+        )
+
+        config = ov_genai.GenerationConfig()
+
+        config.max_new_tokens = max_new_tokens
+        config.temperature = temperature
+        config.top_p = top_p
+        config.repetition_penalty = repetition_penalty
 
         with self._lock:
-            self._pipe.start_chat()
+
+            return self.pipe.generate(
+                prompt,
+                config
+            )
+
+    ##################################################
+    # Streaming
+    ##################################################
+
+    def stream_generate(
+        self,
+        prompt: str,
+        context=""
+    ) -> Iterator[str]:
+
+        q = Queue()
+
+        prompt = self._build_prompt(
+            prompt,
+            context
+        )
+
+        config = ov_genai.GenerationConfig()
+
+        config.max_new_tokens = 512
+        config.temperature = .7
+
+        def streamer(token):
+
+            q.put(token)
+            return False
+
+        def run():
+
             try:
-                return self._pipe.generate(prompt, streamer=streamer, **generation_options)
+
+                self.pipe.generate(
+                    prompt,
+                    config,
+                    streamer
+                )
+
             finally:
-                self._pipe.finish_chat()
 
-    def stream_generate(self, prompt: str, max_new_tokens: int = 4000, **options) -> Iterator[str]:
-        chunks: Queue[Optional[str]] = Queue()
-        errors: Queue[BaseException] = Queue()
+                q.put(None)
 
-        def streamer(subword: str):
-            chunks.put(subword)
-            return StreamingStatus.RUNNING
-
-        def run_generation():
-            try:
-                self.generate(prompt, max_new_tokens=max_new_tokens, streamer=streamer, **options)
-            except BaseException as exc:
-                errors.put(exc)
-            finally:
-                chunks.put(None)
-
-        thread = threading.Thread(target=run_generation, daemon=True)
-        thread.start()
+        threading.Thread(
+            target=run,
+            daemon=True
+        ).start()
 
         while True:
-            chunk = chunks.get()
-            if chunk is None:
+
+            item = q.get()
+
+            if item is None:
                 break
-            yield chunk
 
-        if not errors.empty():
-            raise errors.get()
+            yield item
+
+    ##################################################
+    # Cleanup
+    ##################################################
+
+    def close(self):
+
+        try:
+            if self.capabilities[
+                "supports_chat"
+            ]:
+
+                self.pipe.finish_chat()
+
+        except:
+            pass
 
 
-_llm: Optional[NPULLM] = None
-_llm_lock = threading.Lock()
+##################################################
+# Singleton
+##################################################
+
+_instance = None
+_lock = threading.Lock()
 
 
-def reset_llm() -> None:
-    global _llm
-    with _llm_lock:
-        _llm = None
+def get_llm(
+    model_path
+):
+
+    global _instance
+
+    if _instance is None:
+
+        with _lock:
+
+            if _instance is None:
+
+                _instance = NPULLM(
+                    model_path
+                )
+
+    return _instance
 
 
-def get_llm(model: Optional[str] = None) -> NPULLM:
-    global _llm
-    if _llm is None or (model and _llm.model_name.lower() != model.lower()):
-        with _llm_lock:
-            if _llm is None or (model and _llm.model_name.lower() != model.lower()):
-                path = str(resolve_model_path(model)) if model else None
-                _llm = NPULLM(model_path=path)
-    return _llm
+def reset_llm():
+
+    global _instance
+
+    if _instance:
+
+        _instance.close()
+
+    _instance = None

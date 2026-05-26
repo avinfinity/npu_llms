@@ -1,4 +1,6 @@
 import unittest
+from tempfile import TemporaryDirectory
+from pathlib import Path
 from unittest.mock import patch
 
 from npu_ollama import llm as npu_llm
@@ -27,6 +29,11 @@ class FakePipeline:
             for chunk in ["answer", ": ", prompt]:
                 streamer(chunk)
         return output
+
+
+class NoTemplatePipeline(FakePipeline):
+    def start_chat(self):
+        raise RuntimeError("Chat template wasn't found.")
 
 
 class NPULLMTests(unittest.TestCase):
@@ -84,14 +91,45 @@ class NPULLMTests(unittest.TestCase):
         self.assertEqual(llm._pipe.config["GENERATE_HINT"], "BEST_PERF")
 
     def test_generate_starts_and_finishes_chat(self):
-        with patch.object(npu_llm, "LLMPipeline", FakePipeline):
-            llm = npu_llm.NPULLM(model_path="./models/llama3.2", device="NPU")
+        with TemporaryDirectory() as tmp:
+            model_dir = Path(tmp) / "llama3.2"
+            model_dir.mkdir()
+            (model_dir / "tokenizer_config.json").write_text('{"chat_template": "{{ messages }}"}')
+            with patch.object(npu_llm, "LLMPipeline", FakePipeline):
+                llm = npu_llm.NPULLM(model_path=str(model_dir), device="NPU")
             response = llm.generate("hello", max_new_tokens=16, temperature=0.2)
 
         self.assertEqual(response, "answer: hello")
         self.assertEqual(llm._pipe.started, 1)
         self.assertEqual(llm._pipe.finished, 1)
         self.assertEqual(llm._pipe.calls[0], ("hello", {"max_new_tokens": 16, "temperature": 0.2}))
+
+    def test_generate_skips_chat_mode_without_template(self):
+        with TemporaryDirectory() as tmp:
+            model_dir = Path(tmp) / "bling-tiny-llama-npu-ov"
+            model_dir.mkdir()
+            (model_dir / "tokenizer_config.json").write_text("{}")
+            with patch.object(npu_llm, "LLMPipeline", NoTemplatePipeline):
+                llm = npu_llm.NPULLM(model_path=str(model_dir), device="NPU")
+                response = llm.generate("hello", max_new_tokens=16)
+
+        self.assertEqual(response, "answer: hello")
+        self.assertEqual(llm._pipe.started, 0)
+        self.assertEqual(llm._pipe.finished, 0)
+        self.assertEqual(llm._pipe.calls[0], ("hello", {"max_new_tokens": 16}))
+
+    def test_generate_falls_back_if_openvino_reports_missing_template(self):
+        with TemporaryDirectory() as tmp:
+            model_dir = Path(tmp) / "model-with-bad-template"
+            model_dir.mkdir()
+            (model_dir / "tokenizer_config.json").write_text('{"chat_template": "{{ messages }}"}')
+            with patch.object(npu_llm, "LLMPipeline", NoTemplatePipeline):
+                llm = npu_llm.NPULLM(model_path=str(model_dir), device="NPU")
+                response = llm.generate("hello", max_new_tokens=16)
+
+        self.assertEqual(response, "answer: hello")
+        self.assertFalse(llm.has_chat_template)
+        self.assertEqual(llm._pipe.calls[0], ("hello", {"max_new_tokens": 16}))
 
     def test_stream_generate_yields_chunks(self):
         with patch.object(npu_llm, "LLMPipeline", FakePipeline):

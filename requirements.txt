@@ -3,4 +3,5 @@ huggingface-hub
 httpx
 uvicorn[standard]
 openvino-genai
+openvino-tokenizers
 pyinstaller; platform_system == "Windows"

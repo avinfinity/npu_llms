@@ -29,6 +29,7 @@ Filename: "{app}\npu-ollama.exe"; Parameters: "install-startup"; Flags: runhidde
 Filename: "{app}\npu-ollama.exe"; Parameters: "start"; Flags: nowait runhidden postinstall
 
 [UninstallRun]
+Filename: "{app}\npu-ollama.exe"; Parameters: "stop"; Flags: runhidden
 Filename: "{app}\npu-ollama.exe"; Parameters: "uninstall-startup"; Flags: runhidden
 
 [Registry]
