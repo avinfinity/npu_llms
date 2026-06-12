@@ -8,7 +8,7 @@ from urllib.request import urlopen
 
 
 DEFAULT_REGISTRY_URL = (
-    "https://raw.githubusercontent.com/npu-ollama/models/main/registry.json"
+    "https://raw.githubusercontent.com/npu/models/main/registry.json"
 )
 DEFAULT_HF_COLLECTION = "llmware/npu-openvino"
 
@@ -25,12 +25,12 @@ class RegistryModel:
 
 
 def _bundled_registry() -> List[dict]:
-    text = resources.files("npu_ollama.data").joinpath("registry.json").read_text(encoding="utf-8")
+    text = resources.files("npu.data").joinpath("registry.json").read_text(encoding="utf-8")
     return json.loads(text)["models"]
 
 
 def _remote_registry() -> Optional[List[dict]]:
-    url = os.getenv("NPU_OLLAMA_REGISTRY_URL", DEFAULT_REGISTRY_URL)
+    url = os.getenv("NPU_REGISTRY_URL", DEFAULT_REGISTRY_URL)
     try:
         with urlopen(url, timeout=10) as response:
             return json.loads(response.read().decode("utf-8"))["models"]
@@ -39,7 +39,7 @@ def _remote_registry() -> Optional[List[dict]]:
 
 
 def _collection_registry() -> Optional[List[dict]]:
-    collection_slug = os.getenv("NPU_OLLAMA_HF_COLLECTION", DEFAULT_HF_COLLECTION)
+    collection_slug = os.getenv("NPU_HF_COLLECTION", DEFAULT_HF_COLLECTION)
     try:
         from huggingface_hub import HfApi
 

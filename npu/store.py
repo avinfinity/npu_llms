@@ -12,7 +12,7 @@ from .paths import ensure_dirs, models_dir
 from .registry import RegistryModel, find_model
 
 
-MANIFEST = "npu-ollama-model.json"
+MANIFEST = "npu-model.json"
 
 
 def _now() -> str:

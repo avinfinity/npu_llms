@@ -1,13 +1,13 @@
-#define AppName "NPU Ollama"
+#define AppName "NPU"
 #define AppVersion "0.1.1"
-#define AppPublisher "NPU Ollama Contributors"
+#define AppPublisher "NPU Contributors"
 
 [Setup]
 AppId={{0A09B880-6EB8-4557-A46A-225060873781}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
-DefaultDirName={autopf}\NPU Ollama
+DefaultDirName={autopf}\NPU
 DefaultGroupName={#AppName}
 OutputDir=..\dist
 OutputBaseFilename=npu-setup
@@ -21,8 +21,8 @@ ChangesEnvironment=yes
 Source: "..\dist\npu\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\NPU Ollama"; Filename: "{app}\npu.exe"; Parameters: "start"
-Name: "{group}\NPU Ollama Chat"; Filename: "http://127.0.0.1:11435"
+Name: "{group}\NPU"; Filename: "{app}\npu.exe"; Parameters: "start"
+Name: "{group}\NPU Chat"; Filename: "http://127.0.0.1:11435/chat"
 
 [Run]
 Filename: "{app}\npu.exe"; Parameters: "install-startup"; Flags: runhidden
@@ -139,7 +139,7 @@ begin
 
   Choice :=
     MsgBox(
-      'NPU Ollama requires the Intel NPU Driver for Windows before setup can continue.' + #13#10 + #13#10 +
+      'NPU requires the Intel NPU Driver for Windows before setup can continue.' + #13#10 + #13#10 +
       'Click Yes to open Intel''s driver download page. Install the driver, restart Windows if the driver installer asks you to, then run this setup again.' + #13#10 + #13#10 +
       IntelNpuDriverUrl,
       mbConfirmation,

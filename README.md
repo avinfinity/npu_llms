@@ -1,8 +1,8 @@
-# NPU Ollama
+# NPU
 
 [![Build Installer](https://github.com/avinfinity/npu_llms/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/avinfinity/npu_llms/actions/workflows/main.yml)
 
-NPU Ollama packages the existing OpenVINO GenAI NPU loader behind an Ollama-compatible API, CLI, and minimal local chat UI.
+NPU packages the existing OpenVINO GenAI NPU loader behind a local API, CLI, and browser chat UI.
 
 ## Developer install
 
@@ -13,7 +13,7 @@ npu start
 npu run llama-3.2-1b-instruct-npu-ov
 ```
 
-The API listens on `http://127.0.0.1:11435` by default. If that port is already occupied, for example by Ollama, it automatically falls back to `http://127.0.0.1:11436`. Set `NPU_PORT` to choose a specific port:
+The API listens on `http://127.0.0.1:11435` by default. If that port is already occupied, it automatically falls back to `http://127.0.0.1:11436`. Set `NPU_PORT` to choose a specific port:
 
 ```powershell
 $env:NPU_PORT = "11500"
@@ -34,8 +34,8 @@ npu run llama-3.2-1b-instruct-npu-ov "Say hello"
 npu rm llama-3.2-1b-instruct-npu-ov
 ```
 
-Models are stored in `%LOCALAPPDATA%\NPUOllama\models` on Windows unless `NPU_OLLAMA_HOME` or `NPU_OLLAMA_MODELS` is set. The model registry is loaded from `NPU_OLLAMA_REGISTRY_URL` when available and falls back to the bundled registry.
-By default, `npu list` reads the public llmware NPU OpenVINO collection at `https://huggingface.co/collections/llmware/npu-openvino`; override it with `NPU_OLLAMA_HF_COLLECTION`.
+Models are stored in `%LOCALAPPDATA%\NPU\models` on Windows unless `NPU_HOME` or `NPU_MODELS` is set. The model registry is loaded from `NPU_REGISTRY_URL` when available and falls back to the bundled registry.
+By default, `npu list` reads the public llmware NPU OpenVINO collection at `https://huggingface.co/collections/llmware/npu-openvino`; override it with `NPU_HF_COLLECTION`.
 
 ## Windows startup
 
@@ -43,7 +43,7 @@ By default, `npu list` reads the public llmware NPU OpenVINO collection at `http
 npu install-startup
 ```
 
-This creates a per-user Windows Task Scheduler entry named `NPU Ollama` that starts the API server at logon. The installer scripts in `packaging/` use the same command after installation.
+This creates a per-user Windows Task Scheduler entry named `NPU` that starts the API server at logon. The installer scripts in `packaging/` use the same command after installation.
 
 ## Build a single Windows installer
 

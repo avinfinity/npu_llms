@@ -118,16 +118,16 @@ Set-VersionInFile `
   -Replacement "version = `"$version`""
 
 Set-VersionInFile `
-  -Path "packaging\npu-ollama.iss" `
+  -Path "packaging\npu.iss" `
   -Pattern '#define AppVersion "\d+\.\d+\.\d+"' `
   -Replacement "#define AppVersion `"$version`""
 
 Set-VersionInFile `
-  -Path "npu_ollama\__init__.py" `
+  -Path "npu\__init__.py" `
   -Pattern '__version__ = "\d+\.\d+\.\d+"' `
   -Replacement "__version__ = `"$version`""
 
-Run-Git add pyproject.toml packaging\npu-ollama.iss npu_ollama\__init__.py
+Run-Git add pyproject.toml packaging\npu.iss npu\__init__.py
 Run-Git commit -m "Release $tag"
 Run-Git tag $tag
 Run-Git push $Remote $Branch

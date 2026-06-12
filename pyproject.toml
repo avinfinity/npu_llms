@@ -3,13 +3,13 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "npu-ollama"
+name = "npu"
 version = "0.1.1"
-description = "Ollama-compatible local runtime for NPU-optimized OpenVINO LLMs."
+description = "Local runtime for NPU-optimized OpenVINO LLMs."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-authors = [{ name = "NPU Ollama Contributors" }]
+authors = [{ name = "NPU Contributors" }]
 dependencies = [
   "fastapi>=0.111",
   "huggingface-hub>=0.24",
@@ -28,10 +28,10 @@ windows-installer = [
 ]
 
 [project.scripts]
-npu = "npu_ollama.cli:main"
+npu = "npu.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["npu_ollama*"]
+include = ["npu*"]
 
 [tool.setuptools.package-data]
-npu_ollama = ["static/*.html", "data/*.json"]
+npu = ["static/*.html", "data/*.json"]

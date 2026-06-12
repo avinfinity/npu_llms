@@ -13,7 +13,6 @@ def env_port() -> int | None:
     value = (
         os.getenv("NPU_PORT")
         or os.getenv("npu_port")
-        or os.getenv("OLLAMA_PORT")
     )
 
     if not value:

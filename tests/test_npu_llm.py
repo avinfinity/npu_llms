@@ -3,7 +3,7 @@ from tempfile import TemporaryDirectory
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from npu_ollama import llm as npu_llm
+from npu import llm as npu_llm
 
 
 class FakePipeline:

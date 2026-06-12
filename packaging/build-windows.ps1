@@ -10,7 +10,7 @@ python -c "from huggingface_hub import snapshot_download"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 python -m build
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-python -m PyInstaller packaging\npu-ollama.spec --clean --noconfirm
+python -m PyInstaller packaging\npu.spec --clean --noconfirm
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue
@@ -25,7 +25,7 @@ if (-not $iscc) {
 }
 
 if ($isccPath) {
-  & $isccPath packaging\npu-ollama.iss
+  & $isccPath packaging\npu.iss
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } else {
   Write-Host "PyInstaller bundle created at dist\npu. Install Inno Setup to produce a single .exe installer."

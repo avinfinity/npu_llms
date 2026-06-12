@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from npu_ollama import api
+from npu import api
 
 
 class FakeLLM:
@@ -127,7 +127,7 @@ class LiveAPITests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"version": "0.1.0-npu"})
 
-    def test_tags_returns_ollama_shaped_model_list(self):
+    def test_tags_returns_npu_model_list(self):
         response = self.client.get("/api/tags")
 
         self.assertEqual(response.status_code, 200)
@@ -135,7 +135,7 @@ class LiveAPITests(unittest.TestCase):
         self.assertEqual(body["models"][0]["name"], "llama3.2")
         self.assertEqual(body["models"][0]["details"]["format"], "openvino")
 
-    def test_generate_calls_npu_llm_with_ollama_num_predict_mapping(self):
+    def test_generate_calls_npu_llm_with_num_predict_mapping(self):
         response = self.client.post(
             "/api/generate",
             json={
@@ -164,7 +164,7 @@ class LiveAPITests(unittest.TestCase):
         log_text = api.ACCESS_LOG_PATH.read_text(encoding="utf-8")
         self.assertIn('"POST /api/generate HTTP/1.1" 200 OK', log_text)
 
-    def test_generate_stream_returns_ollama_ndjson(self):
+    def test_generate_stream_returns_npu_ndjson(self):
         with self.client.stream(
             "POST",
             "/api/generate",

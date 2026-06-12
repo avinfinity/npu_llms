@@ -64,7 +64,7 @@ Run-Step "Build Python package" {
 }
 
 Run-Step "Build PyInstaller bundle" {
-  & $Python -m PyInstaller packaging\npu-ollama.spec --clean --noconfirm
+  & $Python -m PyInstaller packaging\npu.spec --clean --noconfirm
 }
 
 if (-not (Test-Path -LiteralPath "dist\npu\npu.exe")) {
@@ -96,7 +96,7 @@ if (-not $isccPath) {
 }
 
 Run-Step "Build installer" {
-  & $isccPath packaging\npu-ollama.iss
+  & $isccPath packaging\npu.iss
 }
 
 if (-not (Test-Path -LiteralPath "dist\npu-setup.exe")) {

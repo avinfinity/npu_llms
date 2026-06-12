@@ -24,12 +24,12 @@ if tokenizers_spec and tokenizers_spec.submodule_search_locations:
         binaries += [(str(tokenizers_dll), ".")]
 
 hiddenimports += [
-    "npu_ollama.api",
-    "npu_ollama.cli",
-    "npu_ollama.llm",
-    "npu_ollama.registry",
-    "npu_ollama.server",
-    "npu_ollama.store",
+    "npu.api",
+    "npu.cli",
+    "npu.llm",
+    "npu.registry",
+    "npu.server",
+    "npu.store",
 ]
 
 a = Analysis(
@@ -37,8 +37,8 @@ a = Analysis(
     pathex=[str(ROOT)],
     binaries=binaries,
     datas=datas + [
-        (str(ROOT / "npu_ollama" / "static" / "chat.html"), "npu_ollama\\static"),
-        (str(ROOT / "npu_ollama" / "data" / "registry.json"), "npu_ollama\\data"),
+        (str(ROOT / "npu" / "static" / "chat.html"), "npu\\static"),
+        (str(ROOT / "npu" / "data" / "registry.json"), "npu\\data"),
     ],
     hiddenimports=hiddenimports,
     hookspath=[],

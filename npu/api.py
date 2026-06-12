@@ -13,14 +13,14 @@ from .llm import get_llm
 from .store import installed_models
 
 app=FastAPI(
-    title="NPU Ollama API"
+    title="NPU API"
 )
 
 
 def static_file(name):
 
     return files(
-        "npu_ollama.static"
+        "npu.static"
     ).joinpath(
         name
     )
