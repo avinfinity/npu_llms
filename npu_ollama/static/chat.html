@@ -3,62 +3,334 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>NPU Ollama Chat</title>
+  <title>NPU Chat</title>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@chatscope/chat-ui-kit-styles@1.4.0/dist/default/styles.min.css"
+  >
   <style>
-    :root { color-scheme: light dark; font-family: Segoe UI, Arial, sans-serif; }
-    body { margin: 0; background: #f6f7f9; color: #17191c; }
-    main { height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
-    header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #d7dbe2; background: #ffffff; }
-    h1 { font-size: 17px; margin: 0; font-weight: 650; }
-    select, textarea, button { font: inherit; }
-    #chat { overflow: auto; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
-    .msg { max-width: 860px; padding: 10px 12px; border: 1px solid #d7dbe2; border-radius: 8px; white-space: pre-wrap; line-height: 1.45; }
-    .user { align-self: flex-end; background: #e9f2ff; }
-    .assistant { align-self: flex-start; background: #ffffff; }
-    form { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 14px 18px; border-top: 1px solid #d7dbe2; background: #ffffff; }
-    textarea { resize: none; min-height: 46px; max-height: 150px; padding: 10px; border: 1px solid #b8c0cc; border-radius: 6px; }
-    button { min-width: 84px; border: 0; border-radius: 6px; background: #1264a3; color: white; font-weight: 650; cursor: pointer; }
-    button:disabled { opacity: .55; cursor: wait; }
+    :root {
+      color-scheme: light dark;
+      --surface: #f4f6f8;
+      --panel: #ffffff;
+      --line: #d7dde5;
+      --text: #161a20;
+      --muted: #687384;
+      --user: #0f6cbd;
+      --assistant: #ffffff;
+      --accent: #0f6cbd;
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .app {
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .topbar {
+      min-height: 58px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .title {
+      min-width: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+      font-weight: 650;
+    }
+
+    .status {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    select,
+    textarea,
+    button {
+      font: inherit;
+    }
+
+    select {
+      width: min(42vw, 360px);
+      height: 36px;
+      padding: 0 34px 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    .icon-button {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .icon-button:disabled {
+      cursor: wait;
+      opacity: .55;
+    }
+
+    .message-list {
+      overflow: auto;
+      padding: 22px 16px;
+    }
+
+    .messages {
+      width: min(100%, 920px);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .empty {
+      margin: auto;
+      max-width: 620px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.45;
+    }
+
+    .msg {
+      max-width: min(78%, 760px);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      align-items: flex-end;
+    }
+
+    .msg.assistant {
+      align-self: flex-start;
+      align-items: flex-start;
+    }
+
+    .role {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .bubble {
+      min-width: 48px;
+      padding: 11px 13px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--assistant);
+      white-space: pre-wrap;
+      line-height: 1.48;
+      overflow-wrap: anywhere;
+    }
+
+    .user .bubble {
+      border-color: var(--user);
+      background: var(--user);
+      color: #ffffff;
+    }
+
+    .composer {
+      border-top: 1px solid var(--line);
+      background: var(--panel);
+      padding: 12px 16px;
+    }
+
+    form {
+      width: min(100%, 920px);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 46px;
+      max-height: 170px;
+      resize: none;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    .send {
+      height: 46px;
+      min-width: 46px;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #ffffff;
+      cursor: pointer;
+    }
+
+    .send:disabled {
+      opacity: .55;
+      cursor: wait;
+    }
+
+    svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    @media (max-width: 680px) {
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        width: 100%;
+      }
+
+      select {
+        width: 100%;
+      }
+
+      .msg {
+        max-width: 92%;
+      }
+    }
+
     @media (prefers-color-scheme: dark) {
-      body { background: #14161a; color: #eef1f5; }
-      header, form, .assistant { background: #1d2026; }
-      header, form, .msg, textarea { border-color: #343944; }
-      textarea { background: #14161a; color: #eef1f5; }
-      .user { background: #16344d; }
+      :root {
+        --surface: #11151b;
+        --panel: #191f27;
+        --line: #303845;
+        --text: #eef2f7;
+        --muted: #9aa6b6;
+        --assistant: #202832;
+        --accent: #4ca8ff;
+        --user: #0f6cbd;
+      }
     }
   </style>
 </head>
 <body>
-<main>
-  <header>
-    <h1>NPU Ollama Chat</h1>
-    <select id="model"></select>
+<main class="app">
+  <header class="topbar">
+    <div class="title">
+      <h1>NPU Chat</h1>
+      <div id="status" class="status">Loading local models</div>
+    </div>
+    <div class="controls">
+      <select id="model" aria-label="Model"></select>
+      <button id="reload" class="icon-button" type="button" title="Reload models" aria-label="Reload models">
+        <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2"/><path d="M3 12A9 9 0 0 1 18.5 5.8"/><path d="M18 2v5h-5"/><path d="M6 22v-5h5"/></svg>
+      </button>
+    </div>
   </header>
-  <section id="chat"></section>
-  <form id="form">
-    <textarea id="prompt" placeholder="Message the local NPU model" required></textarea>
-    <button id="send">Send</button>
-  </form>
+
+  <section class="message-list" id="scroll">
+    <div class="messages" id="messages">
+      <div class="empty" id="empty">Choose an installed model and start chatting with the local OpenVINO NPU runtime.</div>
+    </div>
+  </section>
+
+  <section class="composer">
+    <form id="form">
+      <textarea id="prompt" placeholder="Message the local NPU model" required rows="1"></textarea>
+      <button id="send" class="send" type="submit" title="Send" aria-label="Send">
+        <svg viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+      </button>
+    </form>
+  </section>
 </main>
+
 <script>
-const chat = document.querySelector("#chat");
+const scroll = document.querySelector("#scroll");
+const messagesEl = document.querySelector("#messages");
+const empty = document.querySelector("#empty");
 const form = document.querySelector("#form");
 const promptBox = document.querySelector("#prompt");
 const send = document.querySelector("#send");
+const reload = document.querySelector("#reload");
 const modelSelect = document.querySelector("#model");
+const statusEl = document.querySelector("#status");
 const messages = [];
 
+function setStatus(text) {
+  statusEl.textContent = text;
+}
+
+function chosenModelFromUrl() {
+  return new URLSearchParams(window.location.search).get("model");
+}
+
+function resizePrompt() {
+  promptBox.style.height = "auto";
+  promptBox.style.height = Math.min(promptBox.scrollHeight, 170) + "px";
+}
+
 function add(role, content) {
-  const el = document.createElement("div");
-  el.className = "msg " + role;
-  el.textContent = content;
-  chat.appendChild(el);
-  chat.scrollTop = chat.scrollHeight;
-  return el;
+  empty.hidden = true;
+  const item = document.createElement("article");
+  item.className = "msg " + role;
+  item.innerHTML = `
+    <div class="role">${role === "user" ? "You" : "NPU"}</div>
+    <div class="bubble"></div>
+  `;
+  item.querySelector(".bubble").textContent = content;
+  messagesEl.appendChild(item);
+  scroll.scrollTop = scroll.scrollHeight;
+  return item.querySelector(".bubble");
 }
 
 async function loadModels() {
+  reload.disabled = true;
+  setStatus("Loading local models");
+  const selected = modelSelect.value || chosenModelFromUrl();
   const response = await fetch("/api/tags");
+  if (!response.ok) throw new Error("Could not load models");
   const body = await response.json();
   modelSelect.replaceChildren(...body.models.map((model) => {
     const option = document.createElement("option");
@@ -66,37 +338,86 @@ async function loadModels() {
     option.textContent = model.name;
     return option;
   }));
+
+  if (selected) {
+    modelSelect.value = selected;
+  }
+
+  const hasModels = modelSelect.options.length > 0;
+  modelSelect.disabled = !hasModels;
+  send.disabled = !hasModels;
+  setStatus(hasModels ? `Ready on ${modelSelect.value}` : "No installed models found");
+  reload.disabled = false;
 }
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const text = promptBox.value.trim();
-  if (!text) return;
-  promptBox.value = "";
+async function sendMessage(text) {
   send.disabled = true;
+  const model = modelSelect.value;
   messages.push({role: "user", content: text});
   add("user", text);
   const assistant = add("assistant", "");
+  setStatus(`Generating with ${model}`);
+
   try {
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({model: modelSelect.value, stream: false, messages})
+      body: JSON.stringify({
+        model,
+        stream: false,
+        messages,
+        options: {max_new_tokens: 512}
+      })
     });
     const body = await response.json();
-    const reply = body.message?.content || body.detail || "";
+    if (!response.ok) throw new Error(body.detail || "Chat request failed");
+    const reply = body.message?.content || "";
     assistant.textContent = reply;
     messages.push({role: "assistant", content: reply});
+    setStatus(`Ready on ${model}`);
   } catch (error) {
-    assistant.textContent = String(error);
+    assistant.textContent = String(error.message || error);
+    setStatus("Request failed");
   } finally {
-    send.disabled = false;
+    send.disabled = modelSelect.options.length === 0;
     promptBox.focus();
+  }
+}
+
+promptBox.addEventListener("input", resizePrompt);
+
+promptBox.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    form.requestSubmit();
   }
 });
 
-loadModels().catch((error) => add("assistant", String(error)));
+modelSelect.addEventListener("change", () => {
+  messages.length = 0;
+  document.querySelectorAll(".msg").forEach((node) => node.remove());
+  empty.hidden = false;
+  setStatus(`Ready on ${modelSelect.value}`);
+});
+
+reload.addEventListener("click", () => {
+  loadModels().catch((error) => setStatus(String(error.message || error)));
+});
+
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const text = promptBox.value.trim();
+  if (!text || send.disabled) return;
+  promptBox.value = "";
+  resizePrompt();
+  sendMessage(text);
+});
+
+loadModels().catch((error) => {
+  send.disabled = true;
+  reload.disabled = false;
+  setStatus(String(error.message || error));
+});
 </script>
 </body>
 </html>
-

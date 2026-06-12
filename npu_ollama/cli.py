@@ -1,11 +1,13 @@
 import argparse
 import json
 import os
-import socket
 import sys
-import subprocess
+import threading
+import time
+import webbrowser
 from urllib.request import Request,urlopen
 
+from . import server
 from .store import (
     pull_model,
     remove_model,
@@ -14,17 +16,46 @@ from .store import (
 
 from .networking import (
     DEFAULT_HOST,
+    DEFAULT_PORT,
+    FALLBACK_PORT,
+    env_port,
     resolve_port,
     base_url
 )
 
 HOST = DEFAULT_HOST
-PORT = resolve_port()
 
 
 def url():
 
-     return base_url(HOST,PORT)
+     return base_url(HOST)
+
+
+def candidate_ports(port=None):
+
+    if port is not None:
+
+        return [
+            port
+        ]
+
+    ports = []
+    env = env_port()
+
+    if env is not None:
+
+        ports.append(env)
+
+    ports.extend(
+        [
+            DEFAULT_PORT,
+            FALLBACK_PORT
+        ]
+    )
+
+    return list(
+        dict.fromkeys(ports)
+    )
 
 
 def post(path,payload):
@@ -130,18 +161,102 @@ def run(model,prompt,device):
 
 def serve():
 
-    import uvicorn
-
-    uvicorn.run(
-
-        "npu_ollama.api:app",
-
+    server.serve(
         host=HOST,
-        port=PORT
+        port=None
     )
 
 
-def main():
+def is_server_ready(host, port):
+
+    try:
+
+        with urlopen(
+            f"http://{host}:{port}/health",
+            timeout=.5
+        ) as response:
+
+            return response.status == 200
+
+    except Exception:
+
+        return False
+
+
+def resolve_chat_port(host, port=None):
+
+    for candidate in candidate_ports(port):
+
+        if is_server_ready(
+            host,
+            candidate
+        ):
+
+            return candidate
+
+    return resolve_port(
+        host,
+        port
+    )
+
+
+def chat(model=None, device="NPU", host=HOST, port=None, open_browser=True):
+
+    os.environ["NPU_DEVICE"] = device
+
+    if model:
+
+        os.environ["NPU_MODEL"] = model
+
+    port = resolve_chat_port(
+        host,
+        port
+    )
+
+    chat_url = f"http://{host}:{port}/chat"
+
+    if model:
+
+        chat_url = f"{chat_url}?model={model}"
+
+    if is_server_ready(host, port):
+
+        if open_browser:
+
+            webbrowser.open(chat_url)
+
+        print(chat_url)
+        return 0
+
+    def open_when_ready():
+
+        for _ in range(60):
+
+            if is_server_ready(host, port):
+
+                if open_browser:
+
+                    webbrowser.open(chat_url)
+
+                print(chat_url)
+                return
+
+            time.sleep(.25)
+
+    threading.Thread(
+        target=open_when_ready,
+        daemon=True
+    ).start()
+
+    server.serve(
+        host=host,
+        port=port
+    )
+
+    return 0
+
+
+def main(argv=None):
 
     p=argparse.ArgumentParser()
 
@@ -149,8 +264,65 @@ def main():
         dest="cmd"
     )
 
-    sub.add_parser(
+    serve_parser=sub.add_parser(
         "serve"
+    )
+
+    serve_parser.add_argument(
+        "--host",
+        default=HOST
+    )
+
+    serve_parser.add_argument(
+        "--port",
+        type=int
+    )
+
+    start_parser=sub.add_parser(
+        "start"
+    )
+
+    start_parser.add_argument(
+        "--host",
+        default=HOST
+    )
+
+    start_parser.add_argument(
+        "--port",
+        type=int
+    )
+
+    chat_parser=sub.add_parser(
+        "chat"
+    )
+
+    chat_parser.add_argument(
+        "model",
+        nargs="?"
+    )
+
+    chat_parser.add_argument(
+        "--device",
+        default="NPU",
+        choices=[
+            "NPU",
+            "GPU"
+        ]
+    )
+
+    chat_parser.add_argument(
+        "--host",
+        default=HOST
+    )
+
+    chat_parser.add_argument(
+        "--port",
+        type=int
+    )
+
+    chat_parser.add_argument(
+        "--no-browser",
+        action="store_true"
     )
 
     l=sub.add_parser(
@@ -195,11 +367,29 @@ def main():
         ]
     )
 
-    args=p.parse_args()
+    args=p.parse_args(argv)
 
-    if args.cmd=="serve":
+    if args.cmd in {
+        "serve",
+        "start"
+    }:
 
-        serve()
+        server.serve(
+            host=args.host,
+            port=args.port
+        )
+
+        return 0
+
+    elif args.cmd=="chat":
+
+        return chat(
+            args.model,
+            args.device,
+            args.host,
+            args.port,
+            not args.no_browser
+        )
 
     elif args.cmd=="list":
 
@@ -209,6 +399,8 @@ def main():
                 m["name"]
             )
 
+        return 0
+
     elif args.cmd=="pull":
 
         print(
@@ -217,11 +409,15 @@ def main():
             )
         )
 
+        return 0
+
     elif args.cmd=="rm":
 
         remove_model(
             args.model
         )
+
+        return 0
 
     elif args.cmd=="run":
 
@@ -230,6 +426,11 @@ def main():
             args.prompt,
             args.device
         )
+
+        return 0
+
+    p.print_help()
+    return 1
 
 
 if __name__=="__main__":

@@ -67,13 +67,13 @@ Run-Step "Build PyInstaller bundle" {
   & $Python -m PyInstaller packaging\npu-ollama.spec --clean --noconfirm
 }
 
-if (-not (Test-Path -LiteralPath "dist\npu-ollama\npu-ollama.exe")) {
-  throw "PyInstaller bundle was not created at dist\npu-ollama\npu-ollama.exe"
+if (-not (Test-Path -LiteralPath "dist\npu\npu.exe")) {
+  throw "PyInstaller bundle was not created at dist\npu\npu.exe"
 }
 
 if ($SkipInstaller) {
   Write-Host ""
-  Write-Host "Build complete: dist\npu-ollama\npu-ollama.exe"
+  Write-Host "Build complete: dist\npu\npu.exe"
   exit 0
 }
 
@@ -90,7 +90,7 @@ if (-not $iscc) {
 
 if (-not $isccPath) {
   Write-Host ""
-  Write-Host "Build complete: dist\npu-ollama\npu-ollama.exe"
+  Write-Host "Build complete: dist\npu\npu.exe"
   Write-Host "Installer skipped because Inno Setup was not found. Install Inno Setup 6 or run with -SkipInstaller."
   exit 0
 }
@@ -99,11 +99,11 @@ Run-Step "Build installer" {
   & $isccPath packaging\npu-ollama.iss
 }
 
-if (-not (Test-Path -LiteralPath "dist\npu-ollama-setup.exe")) {
-  throw "Installer was not created at dist\npu-ollama-setup.exe"
+if (-not (Test-Path -LiteralPath "dist\npu-setup.exe")) {
+  throw "Installer was not created at dist\npu-setup.exe"
 }
 
 Write-Host ""
 Write-Host "Build complete:"
-Write-Host "  Bundle:    dist\npu-ollama\npu-ollama.exe"
-Write-Host "  Installer: dist\npu-ollama-setup.exe"
+Write-Host "  Bundle:    dist\npu\npu.exe"
+Write-Host "  Installer: dist\npu-setup.exe"

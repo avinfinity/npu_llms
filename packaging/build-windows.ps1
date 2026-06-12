@@ -28,5 +28,5 @@ if ($isccPath) {
   & $isccPath packaging\npu-ollama.iss
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } else {
-  Write-Host "PyInstaller bundle created at dist\npu-ollama. Install Inno Setup to produce a single .exe installer."
+  Write-Host "PyInstaller bundle created at dist\npu. Install Inno Setup to produce a single .exe installer."
 }

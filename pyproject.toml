@@ -28,8 +28,7 @@ windows-installer = [
 ]
 
 [project.scripts]
-npu-ollama = "npu_ollama.cli:main"
-npu-ollama-serve = "npu_ollama.server:main"
+npu = "npu_ollama.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["npu_ollama*"]

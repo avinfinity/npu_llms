@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from urllib import request
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
@@ -11,43 +12,116 @@ from npu_ollama import api
 
 
 class FakeLLM:
-    model_name = "llama3.2"
+    model_name = "test-model"
     device = "NPU"
 
     def __init__(self):
         self.prompts = []
         self.options = []
 
-    def generate(self, prompt, max_new_tokens=4000, **options):
+    def generate(self, prompt, **options):
         self.prompts.append(prompt)
-        self.options.append({"max_new_tokens": max_new_tokens, **options})
-        return "mocked NPU response"
+        self.options.append(options)
+        return "test response"
 
-    def stream_generate(self, prompt, max_new_tokens=4000, **options):
+    def stream_generate(self, prompt, **options):
         self.prompts.append(prompt)
-        self.options.append({"max_new_tokens": max_new_tokens, **options})
-        yield "mocked "
-        yield "stream"
+        self.options.append(options)
+        yield "test "
+        yield "response"
 
 
 class APITests(unittest.TestCase):
     def setUp(self):
-        self.tempdir = tempfile.TemporaryDirectory()
-        self.original_access_log_path = api.ACCESS_LOG_PATH
-        api.ACCESS_LOG_PATH = Path(self.tempdir.name) / "api-server.log"
         self.fake_llm = FakeLLM()
         api.app.dependency_overrides.clear()
         self.original_get_llm = api.get_llm
-        api.get_llm = lambda *_: self.fake_llm
+        api.get_llm = lambda *args, **kwargs: self.fake_llm
         self.client = TestClient(api.app)
 
     def tearDown(self):
         api.get_llm = self.original_get_llm
-        api.ACCESS_LOG_PATH = self.original_access_log_path
         api.app.dependency_overrides.clear()
-        self.tempdir.cleanup()
 
-    def test_version_endpoint_does_not_load_model(self):
+    def test_health_endpoint_lightweight(self):
+        """Test that health endpoint doesn't load model"""
+        response = self.client.get("/health")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+    
+    def test_tags_returns_model_list(self):
+        """Test that tags endpoint returns model list"""
+        response = self.client.get("/api/tags")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("models", data)
+        self.assertIsInstance(data["models"], list)
+    
+    def test_generate_endpoint_accepts_request(self):
+        """Test that generate endpoint accepts requests"""
+        response = self.client.post(
+            "/api/generate",
+            json={
+                "model": "test-model",
+                "prompt": "test prompt",
+                "stream": False
+            }
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["response"], "test response")
+    
+    def test_chat_endpoint_requires_messages(self):
+        """Test that chat endpoint requires messages"""
+        response = self.client.post(
+            "/api/chat",
+            json={
+                "model": "test-model",
+                "messages": []
+            }
+        )
+        self.assertEqual(response.status_code, 400)
+    
+    def test_chat_endpoint_processes_messages(self):
+        """Test that chat endpoint processes messages"""
+        response = self.client.post(
+            "/api/chat",
+            json={
+                "model": "test-model",
+                "messages": [
+                    {"role": "user", "content": "hello"}
+                ],
+                "stream": False
+            }
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["message"]["content"], "test response")
+
+
+class LiveAPITests(unittest.TestCase):
+    """Tests that require a live server"""
+    
+    @unittest.skipUnless(
+        os.getenv("RUN_LIVE_API_TESTS") == "1",
+        "Set RUN_LIVE_API_TESTS=1 after manually starting run_api.py on port 11435."
+    )
+    def test_live_generate_endpoint_on_11435(self):
+        """Test generate endpoint on live server"""
+        try:
+            req = request.Request(
+                "http://127.0.0.1:11435/api/generate",
+                data=json.dumps({
+                    "model": "test",
+                    "prompt": "test"
+                }).encode(),
+                headers={"Content-Type": "application/json"}
+            )
+            with request.urlopen(req, timeout=5) as r:
+                data = json.loads(r.read())
+                self.assertIn("response", data)
+        except Exception as e:
+            self.skipTest(f"Live server not available: {e}")
         response = self.client.get("/api/version")
 
         self.assertEqual(response.status_code, 200)

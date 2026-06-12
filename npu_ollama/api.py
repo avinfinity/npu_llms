@@ -1,10 +1,12 @@
 import os
+import json
 import time
+from importlib.resources import files
 from datetime import datetime, timezone
 from typing import Optional,List,Dict,Any
 
 from fastapi import FastAPI,HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse,RedirectResponse,StreamingResponse
 from pydantic import BaseModel,Field
 
 from .llm import get_llm
@@ -13,6 +15,15 @@ from .store import installed_models
 app=FastAPI(
     title="NPU Ollama API"
 )
+
+
+def static_file(name):
+
+    return files(
+        "npu_ollama.static"
+    ).joinpath(
+        name
+    )
 
 
 class Message(BaseModel):
@@ -52,13 +63,39 @@ def generation_options(options):
 
     }
 
+    normalized = dict(options)
+
+    if "num_predict" in normalized:
+
+        normalized[
+            "max_new_tokens"
+        ] = normalized.pop(
+            "num_predict"
+        )
+
     return {
 
         k:v
         for k,v
-        in options.items()
+        in normalized.items()
         if k in allowed
     }
+
+
+def chat_prompt(messages):
+
+    lines = [
+        f"{message.role}: {message.content}"
+        for message in messages
+    ]
+
+    lines.append(
+        "assistant:"
+    )
+
+    return "\n".join(
+        lines
+    )
 
 
 @app.get("/health")
@@ -115,10 +152,12 @@ def generate(request:GenerateRequest):
                 **options
             ):
 
-                yield (
-
-                    f'{{"response":"{token}","done":false}}\n'
-                )
+                yield json.dumps(
+                    {
+                        "response":token,
+                        "done":False
+                    }
+                ) + "\n"
 
             yield (
 
@@ -163,7 +202,9 @@ def chat(request:ChatRequest):
         device
     )
 
-    prompt=request.messages[-1].content
+    prompt=chat_prompt(
+        request.messages
+    )
 
     options=generation_options(
         request.options
@@ -178,10 +219,15 @@ def chat(request:ChatRequest):
                 **options
             ):
 
-                yield (
-
-                    f'{{"message":{{"role":"assistant","content":"{token}"}},"done":false}}\n'
-                )
+                yield json.dumps(
+                    {
+                        "message":{
+                            "role":"assistant",
+                            "content":token
+                        },
+                        "done":False
+                    }
+                ) + "\n"
 
             yield (
 
@@ -210,3 +256,19 @@ def chat(request:ChatRequest):
 
         "done":True
     }
+
+
+@app.get("/")
+def index():
+
+    return RedirectResponse(
+        "/chat"
+    )
+
+
+@app.get("/chat")
+def chat_ui():
+
+    return FileResponse(
+        static_file("chat.html")
+    )

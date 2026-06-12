@@ -10,7 +10,7 @@ AppPublisher={#AppPublisher}
 DefaultDirName={autopf}\NPU Ollama
 DefaultGroupName={#AppName}
 OutputDir=..\dist
-OutputBaseFilename=npu-ollama-setup
+OutputBaseFilename=npu-setup
 Compression=lzma
 SolidCompression=yes
 ArchitecturesAllowed=x64
@@ -18,19 +18,19 @@ ArchitecturesInstallIn64BitMode=x64
 ChangesEnvironment=yes
 
 [Files]
-Source: "..\dist\npu-ollama\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\npu\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\NPU Ollama"; Filename: "{app}\npu-ollama.exe"; Parameters: "start"
+Name: "{group}\NPU Ollama"; Filename: "{app}\npu.exe"; Parameters: "start"
 Name: "{group}\NPU Ollama Chat"; Filename: "http://127.0.0.1:11435"
 
 [Run]
-Filename: "{app}\npu-ollama.exe"; Parameters: "install-startup"; Flags: runhidden
-Filename: "{app}\npu-ollama.exe"; Parameters: "start"; Flags: nowait runhidden postinstall
+Filename: "{app}\npu.exe"; Parameters: "install-startup"; Flags: runhidden
+Filename: "{app}\npu.exe"; Parameters: "start"; Flags: nowait runhidden postinstall
 
 [UninstallRun]
-Filename: "{app}\npu-ollama.exe"; Parameters: "stop"; Flags: runhidden
-Filename: "{app}\npu-ollama.exe"; Parameters: "uninstall-startup"; Flags: runhidden
+Filename: "{app}\npu.exe"; Parameters: "stop"; Flags: runhidden
+Filename: "{app}\npu.exe"; Parameters: "uninstall-startup"; Flags: runhidden
 
 [Registry]
 Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}"; Check: NeedsPathEntry(ExpandConstant('{app}')); Flags: preservestringtype

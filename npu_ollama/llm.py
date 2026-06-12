@@ -13,6 +13,15 @@ from .store import model_path as get_model_path
 logger = logging.getLogger(__name__)
 
 
+if not hasattr(ov, "get_available_devices"):
+
+    def _get_available_devices():
+
+        return ov.Core().available_devices
+
+    ov.get_available_devices = _get_available_devices
+
+
 class NPULLM:
 
     def __init__(
