@@ -3,10 +3,6 @@ name: Build Installer
 on:
   workflow_dispatch:
 
-  push:
-    tags:
-      - 'v*'
-
 permissions:
   contents: write
 
@@ -28,7 +24,7 @@ jobs:
 
       - name: Build EXE installer
         shell: pwsh
-        run: .\packaging\build-windows.ps1
+        run: .\scripts\release.ps1
 
       - name: Verify installer exists
         shell: pwsh
