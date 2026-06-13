@@ -1,10 +1,12 @@
 import argparse
 import json
 import os
+import subprocess
 import sys
 import threading
 import time
 import webbrowser
+from pathlib import Path
 from urllib.request import Request,urlopen
 
 from . import server
@@ -13,6 +15,7 @@ from .store import (
     remove_model,
     installed_models
 )
+from .registry import load_registry
 
 from .networking import (
     DEFAULT_HOST,
@@ -24,6 +27,7 @@ from .networking import (
 )
 
 HOST = DEFAULT_HOST
+STARTUP_TASK_NAME = "NPU"
 
 
 def url():
@@ -167,6 +171,83 @@ def serve():
     )
 
 
+def executable_path():
+
+    return Path(sys.argv[0]).resolve()
+
+
+def install_startup(host=HOST, port=None):
+
+    command = f'"{executable_path()}" start --host {host}'
+
+    if port is not None:
+
+        command = f"{command} --port {port}"
+
+    subprocess.run(
+        [
+            "schtasks",
+            "/Create",
+            "/TN",
+            STARTUP_TASK_NAME,
+            "/SC",
+            "ONLOGON",
+            "/TR",
+            command,
+            "/F",
+        ],
+        check=True,
+    )
+
+    print(
+        f"Installed startup task {STARTUP_TASK_NAME}"
+    )
+
+    return 0
+
+
+def uninstall_startup():
+
+    subprocess.run(
+        [
+            "schtasks",
+            "/Delete",
+            "/TN",
+            STARTUP_TASK_NAME,
+            "/F",
+        ],
+        check=True,
+    )
+
+    print(
+        f"Removed startup task {STARTUP_TASK_NAME}"
+    )
+
+    return 0
+
+
+def ps(host=HOST, port=None):
+
+    rows = []
+
+    for candidate in candidate_ports(port):
+
+        if is_server_ready(
+            host,
+            candidate
+        ):
+
+            rows.append(candidate)
+
+    for candidate in rows:
+
+        print(
+            f"npu\t{host}:{candidate}"
+        )
+
+    return 0
+
+
 def is_server_ready(host, port):
 
     try:
@@ -292,6 +373,38 @@ def main(argv=None):
         type=int
     )
 
+    ps_parser=sub.add_parser(
+        "ps"
+    )
+
+    ps_parser.add_argument(
+        "--host",
+        default=HOST
+    )
+
+    ps_parser.add_argument(
+        "--port",
+        type=int
+    )
+
+    install_startup_parser=sub.add_parser(
+        "install-startup"
+    )
+
+    install_startup_parser.add_argument(
+        "--host",
+        default=HOST
+    )
+
+    install_startup_parser.add_argument(
+        "--port",
+        type=int
+    )
+
+    sub.add_parser(
+        "uninstall-startup"
+    )
+
     chat_parser=sub.add_parser(
         "chat"
     )
@@ -327,6 +440,11 @@ def main(argv=None):
 
     l=sub.add_parser(
         "list"
+    )
+
+    l.add_argument(
+        "--installed",
+        action="store_true"
     )
 
     pull=sub.add_parser(
@@ -391,12 +509,32 @@ def main(argv=None):
             not args.no_browser
         )
 
+    elif args.cmd=="ps":
+
+        return ps(
+            args.host,
+            args.port
+        )
+
+    elif args.cmd=="install-startup":
+
+        return install_startup(
+            args.host,
+            args.port
+        )
+
+    elif args.cmd=="uninstall-startup":
+
+        return uninstall_startup()
+
     elif args.cmd=="list":
 
-        for m in installed_models():
+        models = installed_models() if args.installed else load_registry()
+
+        for m in models:
 
             print(
-                m["name"]
+                m["name"] if isinstance(m, dict) else m.name
             )
 
         return 0

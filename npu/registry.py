@@ -91,9 +91,9 @@ def load_registry(allow_remote: bool = True) -> List[RegistryModel]:
     records = None
     if allow_remote:
         records = _collection_registry()
-        if records is None:
+        if not records:
             records = _remote_registry()
-    if records is None:
+    if not records:
         records = _bundled_registry()
     return [RegistryModel(**record) for record in records]
 
