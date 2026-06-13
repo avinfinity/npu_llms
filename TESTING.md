@@ -6,18 +6,17 @@ Run the mocked unit/API tests without starting FastAPI or loading the real NPU m
 .\.npu-env\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-Start the Ollama-compatible FastAPI server explicitly when you want it:
+Start the NPU FastAPI server explicitly when you want it:
 
 ```powershell
 .\.npu-env\Scripts\python.exe run_api.py
 ```
 
-By default, `run_api.py` listens on `127.0.0.1:11435`. Override it with:
+By default, `npu serve` listens on `127.0.0.1:11435`. Override it with:
 
 ```powershell
-$env:OLLAMA_HOST = "127.0.0.1"
-$env:OLLAMA_PORT = "11435"
-.\.npu-env\Scripts\python.exe run_api.py
+$env:NPU_PORT = "11435"
+npu serve --host 127.0.0.1
 ```
 
 The NPU prompt window defaults to 8192 tokens. Change it before starting the API if your prompts or chat history need a different limit:

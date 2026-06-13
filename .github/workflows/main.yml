@@ -33,7 +33,7 @@ jobs:
       - name: Verify installer exists
         shell: pwsh
         run: |
-          if (-not (Test-Path .\dist\npu-ollama-setup.exe)) {
+          if (-not (Test-Path .\dist\npu-setup.exe)) {
             throw "Installer was not created"
           }
 
@@ -41,8 +41,8 @@ jobs:
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: npu-ollama-installer
-          path: .\dist\npu-ollama-setup.exe
+          name: npu-installer
+          path: .\dist\npu-setup.exe
 
       # Create GitHub release only for version tags
       - name: Create GitHub Release
@@ -52,5 +52,5 @@ jobs:
         shell: pwsh
         run: |
           gh release create "${{ github.ref_name }}" `
-            .\dist\npu-ollama-setup.exe `
+            .\dist\npu-setup.exe `
             --generate-notes
